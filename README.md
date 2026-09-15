@@ -1,4 +1,4 @@
-# transcribe-video-long
+# whisper-video-translator
 
 A local Codex skill and CLI script for long-video transcription and Chinese bilingual subtitle generation.
 
@@ -65,7 +65,7 @@ python3 scripts/transcribe_video_long.py /path/to/video.mp4 --language zh
 Unless --output-dir is provided, outputs are written under the current working directory:
 
 ~~~text
-.teaching-video-runtime/outputs/transcribe-video-long/<video-name>-<source-sha256-prefix>/
+.teaching-video-runtime/outputs/whisper-video-translator/<video-name>-<source-sha256-prefix>/
 ~~~
 
 Default visible outputs:
@@ -103,7 +103,7 @@ Clone this repository directly into your Codex skills directory:
 
 ~~~bash
 mkdir -p "$HOME/.codex/skills"
-git clone https://github.com/yangshuli330/transcribe-video-long.git \
+git clone https://github.com/yangshuli330/whisper-video-translator.git \
   "$HOME/.codex/skills/transcribe-video-long"
 ~~~
 
@@ -124,3 +124,11 @@ This keeps responsibilities clear:
 - The Markdown reading draft is sentence-level: it reconstructs text from cues, splits by punctuation, and estimates sentence timestamps from cue text positions.
 - This is not word-level timestamp alignment.
 - Translation quality depends on the local model, prompts, and how the source audio is segmented by Whisper.
+
+## Limitations
+
+- This project expects local command-line runtimes and local model files; it does not bundle ffmpeg, whisper.cpp, llama.cpp, Whisper models, or Hunyuan models.
+- URL downloading is intentionally out of scope. Download media first, then pass a local video path to the script.
+- Subtitle timing follows Whisper cue timing. The Markdown draft is sentence-level with approximate sentence timestamps, not word-level forced alignment.
+- Translation quality depends on the local translation model and source segmentation.
+- The current implementation has been smoke-tested on macOS; broader cross-platform packaging and installer scripts are future work.

@@ -16,7 +16,7 @@ from typing import Any
 MODEL = Path.home() / ".local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin"
 CACHE_SCHEMA = "translation-cache-v2"
 MANIFEST_SCHEMA = "transcribe-video-long-manifest-v1"
-DEFAULT_OUTPUT_ROOT = Path(".teaching-video-runtime") / "outputs" / "transcribe-video-long"
+DEFAULT_OUTPUT_ROOT = Path(".teaching-video-runtime") / "outputs" / "whisper-video-translator"
 
 
 def safe_path_component(value: str) -> str:
@@ -605,7 +605,7 @@ def validate_cli(argv: list[str]) -> None:
 def transcribe_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
-    parser.add_argument("-o", "--output-dir", type=Path, help="输出目录；默认写入当前仓库 .teaching-video-runtime/outputs/transcribe-video-long/<视频名>-<源文件hash前缀>/")
+    parser.add_argument("-o", "--output-dir", type=Path, help="输出目录；默认写入当前仓库 .teaching-video-runtime/outputs/whisper-video-translator/<视频名>-<源文件hash前缀>/")
     parser.add_argument("-l", "--language", default="auto", help="zh/en/ja/... or auto")
     parser.add_argument("--whisper-model", type=Path, default=MODEL, help="whisper.cpp GGML/GGUF 模型路径；默认 ~/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin")
     parser.add_argument("--segment-minutes", type=int, default=15)

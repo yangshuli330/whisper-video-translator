@@ -1,9 +1,9 @@
 ---
-name: transcribe-video-long
-description: 对本地长视频进行可恢复的多语言 Whisper 分段转录，并可用本机 GGUF 翻译模型输出精炼的逐句双语稿和双语 SRT。
+name: whisper-video-translator
+description: 用 whisper.cpp 转录本地视频，并用本机 GGUF 翻译模型生成逐句双语稿和双语 SRT。
 ---
 
-# 长视频多语言双语转录
+# Whisper Video Translator
 
 ## 入口
 
@@ -35,7 +35,7 @@ python3 scripts/transcribe_video_long.py validate OUTPUT_DIR \
 不显式传 -o/--output-dir 时，默认把本次转录放在当前仓库的集中目录：
 
 ~~~text
-.teaching-video-runtime/outputs/transcribe-video-long/<视频名>-<源文件 sha256 前 10 位>/
+.teaching-video-runtime/outputs/whisper-video-translator/<视频名>-<源文件 sha256 前 10 位>/
 ~~~
 
 这样不会散落到视频下载目录，也能避免同名不同视频互相覆盖。若用户指定 -o/--output-dir，则以用户指定目录为准。
