@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -13,7 +14,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-MODEL = Path.home() / ".local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin"
+DEFAULT_WHISPER_MODEL = Path(os.environ.get(
+    "WVT_WHISPER_MODEL",
+    str(Path.home() / ".local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin"),
+)).expanduser()
+DEFAULT_TRANSLATION_MODEL = Path(os.environ["WVT_TRANSLATION_MODEL"]).expanduser() if os.environ.get("WVT_TRANSLATION_MODEL") else None
 CACHE_SCHEMA = "translation-cache-v2"
 MANIFEST_SCHEMA = "transcribe-video-long-manifest-v1"
 DEFAULT_OUTPUT_ROOT = Path(".teaching-video-runtime") / "outputs" / "whisper-video-translator"
@@ -27,7 +32,10 @@ def safe_path_component(value: str) -> str:
 
 def default_output_dir(video: Path, source_meta: dict[str, Any]) -> Path:
     digest = str(source_meta.get("sha256") or "")[:10] or "nohash"
-    return Path.cwd() / DEFAULT_OUTPUT_ROOT / f"{safe_path_component(video.stem)}-{digest}"
+    output_root = Path(os.environ.get("WVT_OUTPUT_ROOT", str(DEFAULT_OUTPUT_ROOT))).expanduser()
+    if not output_root.is_absolute():
+        output_root = Path.cwd() / output_root
+    return output_root / f"{safe_path_component(video.stem)}-{digest}"
 
 
 def run(cmd: list[str]) -> None:
@@ -569,7 +577,7 @@ def validate_outputs(
 
 
 def validate_cli(argv: list[str]) -> None:
-    parser = argparse.ArgumentParser(description="Validate transcribe-video-long outputs")
+    parser = argparse.ArgumentParser(description="Validate whisper-video-translator outputs")
     parser.add_argument("output_dir", type=Path)
     parser.add_argument("--stem", help="Output basename; defaults to the only .srt file in output_dir")
     parser.add_argument("--expect-bilingual", action="store_true")
@@ -579,10 +587,7 @@ def validate_cli(argv: list[str]) -> None:
     parser.add_argument("--expect-sentences-json", action="store_true")
     parser.add_argument("--emit-validation-json", action="store_true")
     args = parser.parse_args(argv)
-    args.video = args.video.expanduser()
-    args.whisper_model = args.whisper_model.expanduser()
-    if args.translation_model is not None:
-        args.translation_model = args.translation_model.expanduser()
+    args.output_dir = args.output_dir.expanduser()
     stem = args.stem
     if not stem:
         candidates = [p.stem for p in args.output_dir.glob("*.srt")]
@@ -602,15 +607,67 @@ def validate_cli(argv: list[str]) -> None:
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
+def doctor_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(description="Check local dependencies for whisper-video-translator")
+    parser.add_argument("--whisper-model", type=Path, default=DEFAULT_WHISPER_MODEL, help="Whisper model path to check")
+    parser.add_argument("--translation-model", type=Path, default=DEFAULT_TRANSLATION_MODEL, help="Optional GGUF translation model path to check")
+    parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    args = parser.parse_args(argv)
+    args.whisper_model = args.whisper_model.expanduser()
+    if args.translation_model is not None:
+        args.translation_model = args.translation_model.expanduser()
+
+    checks: list[dict[str, Any]] = []
+
+    def add(name: str, ok: bool, detail: str, required: bool = True) -> None:
+        checks.append({"name": name, "ok": ok, "required": required, "detail": detail})
+
+    add("python", sys.version_info >= (3, 9), sys.version.split()[0])
+    for command in ("ffmpeg", "ffprobe", "whisper-cli"):
+        found = shutil.which(command)
+        add(command, bool(found), command_version(command) if found else "not found")
+
+    llama = shutil.which("llama-completion")
+    add("llama-completion", bool(llama), command_version("llama-completion") if llama else "not found", required=args.translation_model is not None)
+
+    add("whisper-model", args.whisper_model.is_file(), str(args.whisper_model), required=True)
+    if args.translation_model is None:
+        add("translation-model", True, "not configured; pass --translation-model or set WVT_TRANSLATION_MODEL to check translation", required=False)
+    else:
+        add("translation-model", args.translation_model.is_file(), str(args.translation_model), required=True)
+
+    output_root = Path(os.environ.get("WVT_OUTPUT_ROOT", str(DEFAULT_OUTPUT_ROOT))).expanduser()
+    if not output_root.is_absolute():
+        output_root = Path.cwd() / output_root
+    parent = output_root
+    while not parent.exists() and parent != parent.parent:
+        parent = parent.parent
+    add("output-root", parent.exists() and os.access(parent, os.W_OK), str(output_root), required=True)
+
+    ok = all(item["ok"] or not item["required"] for item in checks)
+    result = {"ok": ok, "checks": checks}
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print("whisper-video-translator doctor")
+        for item in checks:
+            marker = "OK" if item["ok"] else ("WARN" if not item["required"] else "FAIL")
+            required = "required" if item["required"] else "optional"
+            print(f"[{marker}] {item['name']} ({required}) - {item['detail']}")
+        print("summary: " + ("ok" if ok else "failed"))
+    if not ok:
+        raise SystemExit(1)
+
+
 def transcribe_cli(argv: list[str]) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("video", type=Path)
     parser.add_argument("-o", "--output-dir", type=Path, help="输出目录；默认写入当前仓库 .teaching-video-runtime/outputs/whisper-video-translator/<视频名>-<源文件hash前缀>/")
     parser.add_argument("-l", "--language", default="auto", help="zh/en/ja/... or auto")
-    parser.add_argument("--whisper-model", type=Path, default=MODEL, help="whisper.cpp GGML/GGUF 模型路径；默认 ~/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin")
+    parser.add_argument("--whisper-model", type=Path, default=DEFAULT_WHISPER_MODEL, help="whisper.cpp GGML/GGUF 模型路径；默认 ~/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin；也可设 WVT_WHISPER_MODEL")
     parser.add_argument("--segment-minutes", type=int, default=15)
     parser.add_argument("--translate", action="store_true", help="逐字幕翻译成简体中文并合并到同一输出")
-    parser.add_argument("--translation-model", type=Path, help="llama-completion 可加载的 GGUF 翻译模型路径")
+    parser.add_argument("--translation-model", type=Path, default=DEFAULT_TRANSLATION_MODEL, help="llama-completion 可加载的 GGUF 翻译模型路径；也可设 WVT_TRANSLATION_MODEL")
     parser.add_argument("--translation-mode", choices=("window", "cue"), default="window", help="window=按相邻字幕窗口翻译以利用上下文；cue=逐字幕独立翻译")
     parser.add_argument("--translation-window-cues", type=int, default=12, help="window 模式下每次给翻译模型的最大字幕条数")
     parser.add_argument("--full", action="store_true", help="产出所有调试/兼容文件，并保留音频缓存")
@@ -846,6 +903,8 @@ def transcribe_cli(argv: list[str]) -> None:
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "validate":
         validate_cli(sys.argv[2:])
+    elif len(sys.argv) > 1 and sys.argv[1] == "doctor":
+        doctor_cli(sys.argv[2:])
     else:
         transcribe_cli(sys.argv[1:])
 

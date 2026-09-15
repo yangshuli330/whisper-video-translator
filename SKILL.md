@@ -22,6 +22,12 @@ Whisper 模型默认读取 ~/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.b
 
 如果用户给的是视频 URL，不把下载逻辑塞进本脚本；先按 `video-downloader` skill 把 URL 下载到本地，再把下载后的本地视频路径传给本脚本。对用户表现为一条工作流，但职责边界保持为“下载 skill 负责取文件，本 skill 负责本地视频转写翻译”。
 
+运行前可先做健康检查：
+
+~~~bash
+python3 scripts/transcribe_video_long.py doctor
+~~~
+
 已有输出可单独复检：
 
 ```bash

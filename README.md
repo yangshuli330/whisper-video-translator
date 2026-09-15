@@ -35,6 +35,35 @@ You also need local model files:
 
 Model files are intentionally not included in this repository.
 
+
+## Quick health check
+
+Before processing real videos, run:
+
+~~~bash
+python3 scripts/transcribe_video_long.py doctor
+~~~
+
+To check a custom model setup:
+
+~~~bash
+python3 scripts/transcribe_video_long.py doctor   --whisper-model "$HOME/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin"   --translation-model "$HOME/.cache/hy-mt/HY-MT1.5-1.8B-Q4_K_M.gguf"
+~~~
+
+The doctor command checks Python, ffmpeg, ffprobe, whisper-cli, llama-completion, local model files, and output directory writability.
+
+## Configuration
+
+You can pass model paths as flags, or set environment variables:
+
+~~~bash
+export WVT_WHISPER_MODEL="$HOME/.local/share/whisper.cpp/ggml-large-v3-turbo-q5_0.bin"
+export WVT_TRANSLATION_MODEL="$HOME/.cache/hy-mt/HY-MT1.5-1.8B-Q4_K_M.gguf"
+export WVT_OUTPUT_ROOT=".teaching-video-runtime/outputs/whisper-video-translator"
+~~~
+
+Command-line flags override the defaults and are the clearest option for one-off runs.
+
 ## CLI usage
 
 ~~~bash
