@@ -18,6 +18,27 @@ A local Codex skill and CLI script for long-video transcription and Chinese bili
 - Stores resumable ASR and translation cache under .segments/.
 - Supports optional debug/compatibility outputs via --full or --emit-*.
 
+
+## Quick start
+
+On macOS:
+
+~~~bash
+./scripts/install_macos.sh
+python3 scripts/transcribe_video_long.py doctor
+~~~
+
+Then run a local video:
+
+~~~bash
+python3 scripts/transcribe_video_long.py /path/to/video.mp4   --language en   --translate   --translation-model "$HOME/.cache/hy-mt/HY-MT1.5-1.8B-Q4_K_M.gguf"
+~~~
+
+More details:
+
+- docs/INSTALL.md
+- docs/DEMO.md
+
 ## Requirements
 
 Install these command-line tools first:

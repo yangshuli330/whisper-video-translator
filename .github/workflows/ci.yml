@@ -16,5 +16,7 @@ jobs:
         run: python -m py_compile scripts/transcribe_video_long.py
       - name: Check CLI help
         run: python scripts/transcribe_video_long.py --help
+      - name: Check installer syntax
+        run: bash -n scripts/install_macos.sh
       - name: Check doctor JSON output shape
         run: python scripts/transcribe_video_long.py doctor --json || true
