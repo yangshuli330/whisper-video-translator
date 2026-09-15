@@ -1,0 +1,30 @@
+# Runtime artifacts
+.teaching-video-runtime/
+.segments/
+outputs/
+transcript/
+*.sentences.md
+*.sentences.txt
+*.sentences.json
+*.srt
+*.vtt
+manifest.json
+validation.json
+
+# Media and large model files
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.m4a
+*.gguf
+*.bin
+
+# Python/cache
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store
